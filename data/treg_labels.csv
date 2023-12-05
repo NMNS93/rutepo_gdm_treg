@@ -1,0 +1,13 @@
+label,cluster,clust_group,seurat_clusters,top,direction
+treg,Naive-1,Naive,0,DUSP1,0
+treg,Naive-Act-1,Naive,1,JUN,1
+treg,Naive-2,Naive,2,KLF6,1
+treg,Effector-Pre,Effector,3,IL32,1
+treg,Effector-PathII,Effector,4,S100A4,1
+treg,Naive-3,Naive,5,FOS,0
+treg,Naive-Act-2,Naive,6,JUN,1
+treg,Effector-3,Effector,7,KLRB1,1
+treg,Effector-1,Effector,8,ANXA1,1
+treg,Effector-2,Effector,9,ARPC1B,1
+treg,Humanin+,Naive,10,MTRNR2L12,1
+treg,Effector-Term,Effector,11,MALAT1,1

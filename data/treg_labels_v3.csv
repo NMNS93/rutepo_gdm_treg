@@ -1,0 +1,8 @@
+label,cluster,clust_group,seurat_clusters
+treg,Naive-1,Naive,0
+treg,Naive-2,Naive,1
+treg,Effector-1,Effector,2
+treg,Effector-2,Effector,3
+treg,Effector-3,Effector,4
+treg,Humanin+,Undefined,5
+treg,MALAT1+,Undefined,6

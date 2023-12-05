@@ -1,0 +1,11 @@
+label,cluster,clust_group,seurat_clusters,top,direction
+cd4,Naive-Act,Naive,0,JUN,1
+cd4,Naive-1,Naive,1,S100A4,0
+cd4,Memory-1,Memory,2,SH3BGRL3,1
+cd4,Naive-2,Naive,3,ZFP36,0
+cd4,Memory-2,Memory,4,FTH1,1
+cd4,Naive-TCR,Naive,5,CISH,1
+cd4,Effector,Effector,6,GZMK,1
+cd4,Humanin+,Naive,7,MTRNR2L12,1
+cd4,Effector-Term,Effector,8,EEF1A1,0
+cd4,FOXP3+,Effector,9,CTLA4,1
