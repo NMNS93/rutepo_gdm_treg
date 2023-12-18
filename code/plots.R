@@ -36,11 +36,6 @@ cd4_pal <- c("purple", "lightpurple", "blue", "darkred",
              "green", "brown", "yellow", "darkpurp")
 cd4_dimreg_pal <- gdm_dimreg_pal[ match(cd4_pal, names_gdm_dimreg_pal )]
 
-# TODO: display.brewer.pal function to view colors
-# image(1:n, 1, as.matrix(1:n), col = brewer.pal(n, name), 
-#       xlab = paste(name, palattr), ylab = "", xaxt = "n", yaxt = "n", 
-#       bty = "n")
-#TSNEPlot(treg, cols=gdm_dimreg_pal)
 
 # Functions to create plots for panicos project
 
@@ -581,7 +576,6 @@ plot_stirms_box <- function(strims, figdir){
 }
 
 # Performs t-test and add significance stars
-## TODO: values are log2CPM - t test inappropriate
 plot_stirms_gene <- function(strims){
   ggplot(strims, aes(x=status, y=expr, fill=status)) + geom_violin(alpha=0.8) +
     stat_summary(fun = "median",geom='point', shape='-', size=40, alpha=0.5) +

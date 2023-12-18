@@ -174,10 +174,6 @@ p_panel2 = wrap_elements(full = p_metas[[1]]) +
               ") +
   plot_annotation(tag_levels=c("A"))
 
-  
-# TODO: Upset plot as supplementary figure with RFE  
-
 # Note: Cowplot required because upsetplot errors
 ggsave(fs::path(maindir, "Figure4.png"), p_panel2, width=14, height=10)
 
-# # Attempt to use plot_grid so that we can align

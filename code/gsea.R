@@ -140,7 +140,6 @@ gsea_single <- function(tbl, gmt, field="avg_log2FC"){
     fgseaRes = dplyr::arrange(fgseaRes, padj)
   }
   
-  # TODO: Consider CollapsePathways()
   return(fgseaRes)
 }
 

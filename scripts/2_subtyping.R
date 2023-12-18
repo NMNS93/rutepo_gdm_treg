@@ -45,20 +45,7 @@ for(i in cd4_de_idents){
   ggsave(fs::path(figdir, paste0("p_cd4_subtype_top3_", i, ".png")), p_de_cd4_top3[[i]], width=15, height=6)
 }
 
-# Paper marker subtyping ----- 
-# TODO @NEXT : Create plots using Treg stroukov markers
-# Stroukov: CCR7, CD28, CD95, CD45RA (separate naive and memory)
-# Stroukov: CCR4, CCR6, CXCR3, CXCR5 (fucntionally defined memory)
-# Rosenblum: CCR7 (high for naive), CD45RA (low for naive), L-selectin (high for naive), CTLA-4 (low for naive), ICOS (low for naive), 
-#     Ki67 (high for effector only), BCL-2 (low for effector only)
-# Zemmour et al 2018. scRNA Treg TCR: CCR7, SELL, SATB1 and BACH2 (all for resting), S100A4, S100A6 and ITGB1 (activated), IKZF2 (third clust)
-#       Alsot hey claim "treg heterogeneity in mice conserved in humans"
-# Halim et al 2017. CD45RA separates naive and memory (high). Then, CCR4-high = Th-like Tregs
-# Churov et al 2020. Phenoype markers: FOXP3 (activated); CD127lo = activated; CD25hi=activated; GITR=resting; Helios (unk); ICOS (active); CTLA-4 (active);  
-# CD127?hi? ids a subset ? : https://onlinelibrary.wiley.com/doi/10.1002/eji.201040531
-
-
-# Extracted from above using chatgpt
+# Markers
 genes <- c("CCR7", "CD28", "CD95", "CD45RA", "CCR4", "CCR6", "CXCR3", "CXCR5", "L-selectin", 
            "CTLA-4", "ICOS", "Ki67", "BCL-2", "SELL", "SATB1", "BACH2", "S100A4", "S100A6", 
            "ITGB1", "IKZF2", "FOXP3", "CD127lo", "CD25hi", "GITR", "Helios")

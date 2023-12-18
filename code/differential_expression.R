@@ -147,10 +147,6 @@ run_gsea <- function(tbl, gmt, field="avg_log2FC"){
   ranks = tbl[[field]]
   names(ranks) = tbl$gene
   
-  # TODO: When inputting with exact (e.g. JUND/JUN/UBC in PE cluster 13),
-  #.  fgsea fails. It is actually recommended that all expressed genes are
-  #.  considered for fgsea, so filtering is false in this case.:
-  #   https://github.com/ctlab/fgsea/issues/26#issuecomment-1012061210
   fgseaRes <- tryCatch(
     fgsea(pathways, ranks, minSize=3, maxSize=500),
     error=function(e) data.table()) # Min genes in set
@@ -165,7 +161,6 @@ run_gsea <- function(tbl, gmt, field="avg_log2FC"){
   fgseaRes$label = tbl$label[[1]]
   }
   
-  # TODO: Consider CollapsePathways()
   return(fgseaRes)
 }
 

@@ -349,11 +349,11 @@ AddSubtypeLabel <- function(obj, sub_name){
   # Label subtypes
   subs = list(
   trsub = tibble(
-    seurat_clusters=as.character(seq(0,11)), # TODO: optional input?
+    seurat_clusters=as.character(seq(0,11)),  
     subtype=c("rTreg","pTreg","earlyTCR", "aTreg", "LIMS1_Treg", "Naive Treg", "Th-like", "Unknown", "cytox_Treg", "TRBV7", "rTreg_TRBV30", "Humanin_Treg")
   ),
   cd4sub = tibble(
-    seurat_clusters=as.character(seq(0,14)), # TODO: Optional input from file?
+    seurat_clusters=as.character(seq(0,14)), 
     subtype=c("Naive T", "Early Act", "TfH", "Mature T", "Cyto_Interm", "Th17", "T-expansion", "memory Th2", "rT", "Cyto_Late", "Treg", "Naive T2", "Unknown", "Thymocytes_TRBV30", "TRVB7")
   )
   )
@@ -481,22 +481,6 @@ RunDimRed <- function(obj, components=20, neighbors=50, perplexity=30){
 }
 ## Summaries ----
 
-# 
-# n_cells <- function(x) length(Cells(x))
-# med_umi_pc <- function(x) median(x@meta.data$nCount_RNA)
-# med_genes_pc <- function(x) median(x@meta.data$nFeature_RNA)
-# total_genes <- function(x) nrow(x)
-# c_sstats <- function(tenx, sstats, label=""){
-#   # Calculate summary stats
-#   rbind(sstats,
-#         data.frame(
-#           n_cells=n_cells(tenx),
-#           med_umi_pc=med_umi_pc(tenx),
-#           med_genes_pc=med_genes_pc(tenx),
-#           total_genes=total_genes(tenx),
-#           label=label
-#         ))
-# }
 
 filter_cells_pat_median <- function(x, cutoff){
   cp <- cells_per_pat_clust(x, "x")

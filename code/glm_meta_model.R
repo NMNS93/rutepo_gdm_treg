@@ -260,9 +260,7 @@ cluster_deg_filter <- function(x, y) x %>% dplyr::filter(is_sig & abs(avg_log2FC
   dplyr::filter(stringr::str_detect(cluster, y)) %>% pull(gene) %>% unique()
 
 get_coexp_genes <- function(coexp){
-  # TODO: Hardcoded
-  ## Validation: You can see coexpr network as top N selected
-  ## Fix coexp TOM as it has now moved
+  ## To fix coexp TOM error:
   ## coexp@misc$`treg_Naive-Activation-2`$wgcna_net$TOMFiles = "data/TOM/treg_Naive-Activation-2_TOM.rda"
   ## You cansee hub network is selected by topN in the module :: #hdWGCNA::HubGeneNetworkPlot(coexp)
   coexp_topcells = colnames(coexp)[coexp$`Naive-Activation-21` > 5]
