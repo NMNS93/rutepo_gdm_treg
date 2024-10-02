@@ -117,7 +117,7 @@ call_de_all <- function(x, min_cells=20) {
 get_sig_de_genes_v3 <- function(x){
   # Identify significantly differentially expressed genes using the criteria:
   # - p_adj <= 0.05
-  # - avg_log2FC (absolute) > 0.2
+  # - avg_log2FC (absolute) > 0.25
   # - pct expressed in both groups > 0.1
   
   # Applied after call DE pipeline to dataset
@@ -125,7 +125,7 @@ get_sig_de_genes_v3 <- function(x){
   signif = x[
     p_val_adj <= 0.05 & 
       (pct.1 >= 0.1 & pct.2 >=0.1) &
-      abs(avg_log2FC) >= 0.2,
+      abs(avg_log2FC) >= 0.25,
     
     .(gene, seurat_clusters)
   ]
