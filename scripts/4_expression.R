@@ -1,8 +1,7 @@
 # Run differential expression testing within clusters on GDM vs Controls
 
-# Setup
-source("code/differential_expression_v2.R")
-source("code/stacked_violin.R")
+# Library ----
+source("code/differential_expression.R")
 source("code/plots.R")
 
 library(qs)
@@ -13,16 +12,19 @@ library(stringr)
 library(parallel)
 library(data.table)
 
-outdir <- here::here("gdm/results_v3")
-figdir <- fs::dir_create("gdm/figures_v3/diff_expr")
+# Variables ----
+outdir <- here::here("gdm/results")
+figdir <- fs::dir_create("gdm/figures/diff_expr")
 gdm <- qs::qread(fs::path(outdir, "gdm_subtyped.qs"))
+
+# Main ----
+
+# Select scRNA data
 cd4 <- gdm$cd4
 treg <- gdm$treg
 rm(gdm)
 Idents(treg) <- "cluster"
 Idents(cd4) <- "cluster"
-
-# Differential expression testing ----
 
 # Call differential expression
 de_treg <- call_de_all(treg)

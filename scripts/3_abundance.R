@@ -1,31 +1,38 @@
 # Run differential abundance testing with speckle/propeller method
 
+# Library ----
 source("code/plots.R")
 library(patchwork)
 library(speckle)
 library(dplyr)
 library(logger)
-outdir <- fs::dir_create("gdm/results_v3/")
-figdir <- fs::dir_create("gdm/figures_v3/abundance")
+
+# Variables ----
+outdir <- fs::dir_create("gdm/results/")
+figdir <- fs::dir_create("gdm/figures/abundance")
 gdm <- qs::qread(fs::path(outdir, "gdm_subtyped.qs"))
+
+# Main ----
+
+# Load Seurat datasets
 treg <- gdm$treg
 cd4 <- gdm$cd4
 rm(gdm)
 DefaultAssay(treg) <- "SCT"
 DefaultAssay(cd4) <- "SCT"
 
-# Propeller
-# https://academic.oup.com/bioinformatics/article/38/20/4720/6675456
-# https://github.com/phipsonlab/speckle
+# Run propeller for abundance testing
+# source: https://academic.oup.com/bioinformatics/article/38/20/4720/6675456
+# source: https://github.com/phipsonlab/speckle
 log_info("Running Treg propeller")
 tpropeller <- propeller(clusters = treg$cluster, sample = treg$multi_q, group = treg$cond_cln) %>%
-    dplyr::mutate(cluster = rownames(.)) %>%
-    dplyr::mutate(PropRatio = 1 + (1 - PropRatio)) # Flip for GDM
+  dplyr::mutate(cluster = rownames(.)) %>%
+  dplyr::mutate(PropRatio = 1 + (1 - PropRatio)) # Flip for GDM
 log_info("Completed Treg propeller")
 log_info("Running CD4 propeller")
 cpropeller <- propeller(clusters = cd4$cluster, sample = cd4$multi_q, group = cd4$cond_cln) %>%
-    dplyr::mutate(cluster = rownames(.)) %>%
-    dplyr::mutate(PropRatio = 1 + (1 - PropRatio))
+  dplyr::mutate(cluster = rownames(.)) %>%
+  dplyr::mutate(PropRatio = 1 + (1 - PropRatio))
 log_info("Completed Treg propeller")
 
 log_info("Saving propeller results")
@@ -36,6 +43,8 @@ pp <- qs::qread(fs::path(outdir, "propeller.qs"))
 tpropeller <- pp[[1]]
 cpropeller <- pp[[2]]
 rm(pp)
+
+# Exploratory visualisations ----
 
 # Plot 1: Fill by condition
 log_info("Generating plots")
@@ -57,12 +66,12 @@ p_cond_cd4 <- plot_cond_tsne(cd4, gdm_dimreg_pal[5]) + theme(legend.position = "
 # Save images to object
 log_info("Saving figure datasets")
 ab_figobs <- list(
-    "treg_ab" = list(
-        p_cond_treg, p_ab_fbc_treg, p_ab_test_treg, p_ab_prop_treg
-    ),
-    "cd4_ab" = list(
-        p_cond_cd4, p_ab_fbc_cd4, p_ab_test_cd4, p_ab_prop_cd4
-    )
+  "treg_ab" = list(
+    p_cond_treg, p_ab_fbc_treg, p_ab_test_treg, p_ab_prop_treg
+  ),
+  "cd4_ab" = list(
+    p_cond_cd4, p_ab_fbc_cd4, p_ab_test_cd4, p_ab_prop_cd4
+  )
 )
 # Extremely long running now that we are showing the dotplot.
 qs::qsave(ab_figobs, fs::path(outdir, "ab_test_fig.qs"))

@@ -5,23 +5,23 @@ import os
 # -- Version of the databse
 cpdb_version = 'v5.0.0'
 # -- Path where the input files to generate the database are located
-cpdb_target_dir = os.path.join('/genomics/projects/B061-PanicosShangaris/nana/data/cellphonedb', cpdb_version)
+cpdb_target_dir = os.path.join('data/cellphonedb', cpdb_version)
 db_utils.download_database(cpdb_target_dir, cpdb_version)
 
 # Paths
-cpdb_file_path = '/genomics/projects/B061-PanicosShangaris/nana/data/cellphonedb/v5.0.0/cellphonedb.zip'
-deg_file_path = '/genomics/projects/B061-PanicosShangaris/nana/data/cellphonedb/cd4_degs.txt'
+cpdb_file_path = 'data/cellphonedb/v5.0.0/cellphonedb.zip'
+deg_file_path = 'data/cellphonedb/cd4_degs.txt'
 
 # Define output paths for pickled results
-pickle_out_path_case = '/genomics/projects/B061-PanicosShangaris/nana/gdm/results_v3/cellphonedb/case/cpdb_results_case.pkl'
-pickle_out_path_control = '/genomics/projects/B061-PanicosShangaris/nana/gdm/results_v3/cellphonedb/control/cpdb_results_control.pkl'
-stat_out_path_case = '/genomics/projects/B061-PanicosShangaris/nana/gdm/results_v3/cellphonedb/case/cpdb_stat_case.pkl'
-stat_out_path_control = '/genomics/projects/B061-PanicosShangaris/nana/gdm/results_v3/cellphonedb/control/cpdb_stat_control.pkl'
+pickle_out_path_case = 'gdm/results_v3/cellphonedb/case/cpdb_results_case.pkl'
+pickle_out_path_control = 'gdm/results_v3/cellphonedb/control/cpdb_results_control.pkl'
+stat_out_path_case = 'gdm/results_v3/cellphonedb/case/cpdb_stat_case.pkl'
+stat_out_path_control = 'gdm/results_v3/cellphonedb/control/cpdb_stat_control.pkl'
 
 # For CASE
-meta_file_path_case = '/genomics/projects/B061-PanicosShangaris/nana/data/cellphonedb/cd4_case_metadata.txt'
-counts_file_path_case = '/genomics/projects/B061-PanicosShangaris/nana/data/cellphonedb/cd4_case_expression_matrix.txt'
-out_path_case = '/genomics/projects/B061-PanicosShangaris/nana/gdm/results_v3/cellphonedb/case'
+meta_file_path_case = 'data/cellphonedb/cd4_case_metadata.txt'
+counts_file_path_case = 'data/cellphonedb/cd4_case_expression_matrix.txt'
+out_path_case = 'gdm/results_v3/cellphonedb/case'
 
 from cellphonedb.src.core.methods import cpdb_degs_analysis_method
 
@@ -46,9 +46,9 @@ with open(pickle_out_path_case, 'wb') as f:
     pickle.dump(cpdb_results_case, f)
 
 # For CONTROL
-meta_file_path_control = '/genomics/projects/B061-PanicosShangaris/nana/data/cellphonedb/cd4_control_metadata.txt'
-counts_file_path_control = '/genomics/projects/B061-PanicosShangaris/nana/data/cellphonedb/cd4_control_expression_matrix.txt'
-out_path_control = '/genomics/projects/B061-PanicosShangaris/nana/gdm/results_v3/cellphonedb/control'
+meta_file_path_control = 'data/cellphonedb/cd4_control_metadata.txt'
+counts_file_path_control = 'data/cellphonedb/cd4_control_expression_matrix.txt'
+out_path_control = 'gdm/results_v3/cellphonedb/control'
 
 cpdb_results_control = cpdb_degs_analysis_method.call(
     cpdb_file_path=cpdb_file_path,                             # CellphoneDB database zip file
@@ -95,7 +95,7 @@ cpdb_results = cpdb_statistical_analysis_method.call(
     subsampling_num_cells = 1000,                    # Number of cells to subsample (integer) (default: 1/3 of the dataset).
     separator = '|',                                 # Sets the string to employ to separate cells in the results dataframes "cellA|CellB".
     debug = False,                                   # Saves all intermediate tables employed during the analysis in pkl format.
-    output_path = '/genomics/projects/B061-PanicosShangaris/nana/gdm/results_v3/cellphonedb_stat',                          # Path to save results.
+    output_path = 'gdm/results_v3/cellphonedb_stat',                          # Path to save results.
     output_suffix = None                             # Replaces the timestamp in the output files by a user defined string in the  (default: None).
     )
     
@@ -123,7 +123,7 @@ cpdb_results = cpdb_statistical_analysis_method.call(
     subsampling_num_cells = 1000,                    # Number of cells to subsample (integer) (default: 1/3 of the dataset).
     separator = '|',                                 # Sets the string to employ to separate cells in the results dataframes "cellA|CellB".
     debug = False,                                   # Saves all intermediate tables employed during the analysis in pkl format.
-    output_path = '/genomics/projects/B061-PanicosShangaris/nana/gdm/results_v3/cellphonedb_stat/control',                          # Path to save results.
+    output_path = 'gdm/results_v3/cellphonedb_stat/control',                          # Path to save results.
     output_suffix = None                             # Replaces the timestamp in the output files by a user defined string in the  (default: None).
     )
     

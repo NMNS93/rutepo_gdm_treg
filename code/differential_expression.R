@@ -1,334 +1,185 @@
-# Functions to run DE analysis
+# Perform differential expression analysis
 
+# Library ----
 library(parallel)
 library(Seurat)
-library(ggrepel)
-library(dplyr)
-library(fgsea)
-library(data.table)
 library(MAST)
-library(scProportionTest)
+library(dplyr)
+library(data.table)
 
-# Objects
+# Functions ----
 
-# Extned sc_utils to enable plot storage
-# Extend the perms objects
-setOldClass(c("gg", "ggplot"))
-setClass(
-  "mySPT",
-  contains=c("sc_utils", "ggplot"),
-  slots=c(plot="ggplot")
-) -> mySPT
-
-
-cluster_de <- function(obj, label){
-  DefaultAssay(obj) = "RNA"
-  Idents(obj) = "seurat_clusters"
-  cluster_ids = as.character(levels(obj))
-  cluster_de = mclapply(cluster_ids, function(x){
-    cl = FindMarkers(obj, ident.1 = x, only.pos=F)
-    cl$gene = rownames(cl)
-    cl$ident = x
-    return(cl)
-    },
-    mc.cores=10
-  )
-  de_result = Reduce(rbind, cluster_de)
-  de_result$label = label
-  return(tibble(de_result))
-}
-
-de_top_filter <- function(x, type="all", fc.cutoff=0.5, top_n=2) {
-  # Type can be pos, neg or all
-  stopifnot(type %in% c("pos", "neg", "all"))
-  
-  if(type=="pos"){x = dplyr::filter(x, avg_log2FC>=fc.cutoff)}
-  if(type=="neg"){x = dplyr::filter(x, avg_log2FC<=fc.cutoff)}
-  
-  x %>% dplyr::filter(
-  abs(pct.2 - pct.1) >= 0.2 & # Minimum percentage
-  p_val_adj <= 0.01) %>%
-  dplyr::top_n(top_n, abs(avg_log2FC))
-}
-
-ShowClusterDeTop <- function(x, de, reduction="tsne"){
-  DefaultAssay(x) <- "RNA"
-  cc = sort(unique(x$seurat_clusters))
-  
-  get_cluster_top_genes <- function(x, de, i){
-    pos_genes = de %>% dplyr::filter(ident==as.character(i)) %>% de_top_filter("pos")
-    neg_genes = de %>% dplyr::filter(ident==as.character(i)) %>% de_top_filter("neg")
-    fps = lapply(pos_genes$gene, function(y) FeaturePlot(x, y, reduction=reduction))
-    if(length(fps)>2){fps = fps[1:2]}
-    if(length(fps)==1){fps = list(fps[[1]], ggplot())}
-    # Switch to under-expressed genes if none over-expressed
-    if(length(fps)==0){
-      fps = lapply(neg_genes$gene, function(y) FeaturePlot(x, y, reduction=reduction, cols=c("lightgray","red")))
-      if(length(fps)>2){fps = fps[1:2]}
-      if(length(fps)==1){fps = list(fps[[1]], ggplot())}
-      if(length(fps)==0){fps = list(ggplot(), ggplot())}
-    }
-    plts = c(list(show_cluster(x, i, i, reduction=reduction)), fps)
-    patchwork::wrap_plots(plts, ncol=3)
-  }
-
-  p_top <- lapply(cc, get_cluster_top_genes, x=x, de=de)
-  p_topw <- patchwork::wrap_plots(p_top, ncol=1)
-  return(p_topw)
-}
-
-call_de <- function(obj, idents, x.1, x.2){
-  Idents(obj) = idents
-
-  cl = FindMarkers(obj, ident.1=x.1, ident.2=x.2, logfc.threshold=0, test.use="MAST")
-  cl$gene = rownames(cl)
-  cl$ident = idents
-  cl$x.1 = x.1
-  cl$x.2 = x.2
-
-  return(tibble(cl))
-}
-
-condition_de <- function(obj, label){
-  Idents(obj) = "condition"
-  conds = unique(obj$condition)
-  stopifnot("CONTROL" %in% conds)
-  conds = setdiff(conds, "CONTROL")
-  
-  cond_de = mclapply(conds, function(x){
-    cl = FindMarkers(obj, ident.1=x, ident.2="CONTROL", logfc.threshold=0)
-    cl$gene = rownames(cl)
-    cl$ident = x
-    cl
-  }, mc.cores=10)
-  
-  de_result = Reduce(rbind, cond_de)
-  de_result$label = label
-  
-  #de_result = dplyr::filter(de_result, p_val_adj <= 0.05)
-  
-  return(tibble(de_result))
-}
-
-condition_gsea <- function(
-    de,
-    gmt_f = fs::dir_ls(here::here("data/gsea_gene_sets/"), glob="*.gmt"),
-    cores=6
-    ){
-  
-  de_split = split(de, de$ident)
-  
-  gsea = mclapply(
-    gmt_f,
-    function(x){
-      rbindlist(
-        lapply(de_split, run_gsea, gmt=x),
-        fill=T
-      )
-    },
-    mc.cores=cores
-  )
-  
-  gsea = rbindlist(gsea, fill=T)
-  
-  if(nrow(gsea)>0){
-    # Filter if not null
-    gsea = dplyr::filter(gsea, padj <= 0.1) # Soft filter
-  }
-  
-  return(gsea)
-}
-
-run_gsea <- function(tbl, gmt, field="avg_log2FC"){
-  # Ref for gmt_files :: fs::dir_ls(here::here("data/gsea_gene_sets/"), glob="*.gmt")
-
-  # Run GSEA
-  pathways = gmtPathways(gmt)
-  ranks = tbl[[field]]
-  names(ranks) = tbl$gene
-  
-  fgseaRes <- tryCatch(
-    fgsea(pathways, ranks, minSize=3, maxSize=500),
-    error=function(e) data.table()) # Min genes in set
-  
-  if(nrow(fgseaRes) > 0){
-  fgseaRes$gmt = fs::path_file(gmt)
-  fgseaRes = dplyr::arrange(fgseaRes, padj)
-  #fgseaRes$itblnt = unique(i$itblnt)
-  
-  # Add metadata from input DE table
-  fgseaRes$ident = tbl$ident[[1]]
-  fgseaRes$label = tbl$label[[1]]
-  }
-  
-  return(fgseaRes)
-}
-
-run_sc_prop_test <- function(x, label){
-  # Create object for test:
-  perm <- sc_utils(x)
-  
-  # Run permutation test 
-  res = permutation_test(
-    perm, cluster_identity = "cluster",
-    sample_1 = "CONTROL", sample_2 = "CASE",
-    sample_identity = "control"
-  )
-  res = as(res, "mySPT")
-  res@plot = permutation_plot(res) + labs(title=paste0(label, "::"))
-  
-  # Run permutation test for each condition against the control
-  # conditions <- unique(x@meta.data$control) %>% purrr::discard(~.x=="CONTROL")
-  # perms <- mclapply(conditions, function(i){
-  #   res = permutation_test(
-  #     perm, cluster_identity = "cluster",
-  #     sample_1 = "CONTROL", sample_2 = i,
-  #     sample_identity = "condition"
-  #   )
-  #   res = as(res, "mySPT")
-  #   res@plot = permutation_plot(res) + labs(title=paste0(label, "::", i))
-  #   return(res)
-  # }, mc.cores=4
-  # )
-  # names(perms) <- conditions
-
-  return(res)
-}
-
-# Diffexp by condition and by cluster
-run_de_cond_clust <- function(x, min_cells=30) {
-  stopifnot(
-    "condition" %in% names(x@meta.data) &
-      "seurat_clusters" %in% names(x@meta.data)
-  )
-  
-  Idents(x) = "seurat_clusters"
-  # Filter any clusters rthat have too few cells
-  combs = dplyr::count(x@meta.data, condition, seurat_clusters) %>% dplyr::filter(n>=min_cells)
-  combs = split(combs, combs$condition == "CONTROL")
-  # Select unique combo of condition and clusters to compare only if they are present in control
-  indata = dplyr::filter(combs[["FALSE"]], seurat_clusters %in% combs[["TRUE"]]$seurat_clusters)
-  
-  # Define function for DE on a single condition and cluster
-  # Here, we follow reocmmendation to use no logFC threshold and rank on this value
-  ## https://github.com/ctlab/fgsea/issues/50#issuecomment-514599752
-  de_cond_clust <- function(x, i, indata){
-    cond = indata[[i, "control"]]; clust= indata[[i, "seurat_clusters"]]
-    marks = FindMarkers(x, subset.ident=clust, group.by="control",
-                        ident.1="CASE", ident.2="CONTROL", logfc.threshold = 0,
-                        test.use="MAST")
-    if(nrow(marks) > 0){
-      marks$gene = rownames(marks)
-      marks$condition = cond
-      marks$cluster = clust
-      marks$ident = paste(marks$condition, marks$cluster, sep="_")
-      #marks = dplyr::filter(marks, p_val_adj <= 0.05)
-    }
-    return(marks)
-  }
-  
-  res = rbindlist(
-    mclapply(seq(nrow(indata)), function(i){
-      de_cond_clust(x, i, indata)
-    },
-    mc.cores=5),
-    fill=T)
-  
-  return(res)
-}
-
-call_de_cc <- function(x, min_cells=30) {
+#' Run differential expression analysis between clusters
+call_de_cc <- function(x, min_cells = 20) {
   stopifnot(
     "control" %in% names(x@meta.data) &
       "seurat_clusters" %in% names(x@meta.data)
   )
-  
-  DefaultAssay(x) = "RNA"
-  Idents(x) = "seurat_clusters"
+
+  DefaultAssay(x) <- "SCT"
+  Idents(x) <- "seurat_clusters"
+
   # Filter any clusters that have too few cells
-  combs = dplyr::count(x@meta.data, control, seurat_clusters) %>% dplyr::filter(n>=min_cells)
-  combs = split(combs, combs$control == "CONTROL")
+  combs <- dplyr::count(x@meta.data, control, seurat_clusters) %>% dplyr::filter(n >= min_cells)
+  combs <- split(combs, combs$control == "CONTROL")
   # Select unique combo of condition and clusters to compare only if they are present in control
-  indata = dplyr::filter(combs[["FALSE"]], seurat_clusters %in% combs[["TRUE"]]$seurat_clusters)
-  
-  
+  indata <- dplyr::filter(combs[["FALSE"]], seurat_clusters %in% combs[["TRUE"]]$seurat_clusters)
+
   # Define function for DE on a single condition and cluster
-  # Here, we follow reocmmendation to use no logFC threshold and rank on this value
-  ## https://github.com/ctlab/fgsea/issues/50#issuecomment-514599752
-  de_cond_clust <- function(x, i, indata){
-    cond = indata[[i, "control"]]; clust= indata[[i, "seurat_clusters"]]
-    marks = FindMarkers(x, subset.ident=clust, group.by="control",
-                        ident.1="CASE", ident.2="CONTROL", logfc.threshold = 0)
-    if(nrow(marks) > 0){
-      marks$gene = rownames(marks)
-      marks$condition = cond
-      marks$cluster = clust
-      marks$ident = paste(marks$condition, marks$cluster, sep="_")
-      #marks = dplyr::filter(marks, p_val_adj <= 0.05)
+  de_cond_clust <- function(x, i, indata) {
+    cond <- indata[[i, "control"]]
+    clust <- indata[[i, "seurat_clusters"]]
+    # Note: FindMarkers performed previously for subtyping
+    xs <- PrepSCTFindMarkers(subset(x, seurat_clusters == clust))
+    marks <- FindMarkers(xs,
+      group.by = "control",
+      ident.1 = "CASE", ident.2 = "CONTROL", logfc.threshold = 0, test.use = "MAST"
+    )
+    if (nrow(marks) > 0) {
+      marks$gene <- rownames(marks)
+      marks$condition <- cond
+      marks$cluster <- clust
+      marks$ident <- paste(marks$condition, marks$cluster, sep = "_")
+      # marks = dplyr::filter(marks, p_val_adj <= 0.05)
     }
     return(marks)
   }
-  
-  res = rbindlist(
-    mclapply(seq(nrow(indata)), function(i){
+
+  res <- rbindlist(
+    mclapply(seq(nrow(indata)), function(i) {
       de_cond_clust(x, i, indata)
     },
-    mc.cores=5),
-    fill=T)
-  
+    mc.cores = 5
+    ),
+    fill = T
+  )
+
   return(res)
 }
 
-# Plots ----
 
-# Plot volcano of clusters
-volcano_within_clusters <- function(x, label, nrow=5){
-
-  p_volcano <- function(x){
-  # Generate label dataset
-  df_sig = dplyr::filter(x, abs(avg_log2FC)>=0.5 & p_val_adj <= 0.01)
-  df_sig$color = ifelse(sign(df_sig$avg_log2FC)==-1, "down", "up")
-    
-  ggplot(x, aes(x=avg_log2FC, y=-log10(p_val_adj))) + 
-    # Set style and show cut-offs
-    geom_hline(yintercept=-log10(0.01), linetype="dashed", color="grey") +
-    geom_vline(xintercept = c(-.5,.5), linetype="dashed", color="grey") +
-    theme_bw() +
-    # Plot all genes
-    geom_point(alpha=.5) +
-    # Label significant genes
-    geom_point(data=df_sig, aes(color=color)) + 
-    ggrepel::geom_text_repel(aes(label=gene), data=df_sig) +
-    labs(x="avg_log2FC", title=paste0(unique(x$seurat_clusters), "_", unique(x$cluster))) +
-    guides(color="none") +
-    scale_color_manual(values=c("down"="blue", "up"="red"))
-  }
-  
-  # Iterate over clusters and generate plots
-  clust_iter <- sort(unique(x$seurat_clusters))
-  plots <- mclapply(
-    clust_iter, function(i){
-      p_volcano(dplyr::filter(x, seurat_clusters==i))
-    }
+#' Call differential expression between all clusters and gene sets
+call_de_all <- function(x, min_cells = 20) {
+  # Check
+  stopifnot(
+    "control" %in% names(x@meta.data) &
+      "seurat_clusters" %in% names(x@meta.data)
   )
-  plt <- patchwork::wrap_plots(plots, nrow=nrow) + patchwork::plot_annotation(title=label)
-  return(plt)
+
+  # Setup
+  DefaultAssay(x) <- "SCT"
+  Idents(x) <- "seurat_clusters"
+
+  # Identify and filter any clusters with too few cells for DE in either case or control
+  f_filter_clusters <- function(x, case_name) {
+    x@meta.data %>%
+      dplyr::filter(control == case_name) %>%
+      dplyr::count(seurat_clusters) %>%
+      dplyr::filter(n >= min_cells) %>%
+      pull(seurat_clusters) %>%
+      as.character() %>%
+      as.numeric()
+  }
+  pass_in_case <- f_filter_clusters(x, "CASE")
+  pass_in_control <- f_filter_clusters(x, "CONTROL")
+  analysis_clusters <- intersect(pass_in_case, pass_in_control)
+
+  # Define function for DE on a single cluster
+  de_clust <- function(x, i) {
+    # x is seurat object
+    # i is cluster identifier in seurat_clusters
+    xsubset <- subset(x, seurat_clusters == i)
+
+    xmarkers <- FindMarkers(
+      xsubset,
+      assay = "SCT", group.by = "control", ident.1 = "CASE", ident.2 = "CONTROL",
+      logfc.threshold = 0, verbose = FALSE, recorrect_umi = FALSE, test.use = "MAST", min.pct = 0
+    )
+
+    if (nrow(xmarkers) > 0) {
+      xmarkers$gene <- rownames(xmarkers)
+      xmarkers$condition <- "CASE:CONTROL"
+      xmarkers$seurat_clusters <- factor(i)
+      xmarkers$ident <- paste(xmarkers$condition, xmarkers$cluster, sep = "_")
+      xmarkers <- dplyr::left_join(
+        xmarkers,
+        unique(x@meta.data[, c("label", "seurat_clusters", "clust_group", "cluster")])
+      )
+      xmarkers <- data.table(xmarkers)
+    } else {
+      log_warn("No markers found for ", i)
+      log_warn(xmarkers)
+      xmarkers <- data.table()
+    }
+
+    return(xmarkers)
+  }
+
+  # Apply DE for each cluster
+  de_res <- data.table::rbindlist(
+    mclapply(
+      analysis_clusters,
+      function(e) {
+        de_clust(x, e)
+      },
+      mc.cores = 5
+    )
+  )
+
+
+  de_res <- data.table(de_res)
+
+  return(de_res)
 }
 
+#' Identify significantly differentially expressed genes using the criteria:
+get_sig_de_genes_v3 <- function(x) {
+  # Applied after call DE pipeline to dataset
+  x <- data.table(x)
+  signif <- x[
+    p_val_adj <= 0.05 &
+      (pct.1 >= 0.1 & pct.2 >= 0.1) &
+      abs(avg_log2FC) >= 0.25,
 
-de_dot_plot <- function(x, col.scale){
-  # x = DE results table
-  # Filter for significant genes
-  ggplot(x, aes(y=gene, x=cluster)) + 
-    geom_point(aes(fill=avg_log2FC, size=-log10(p_val_adj)), shape=21) +
-    theme_bw() +
-    scale_x_discrete(
-      position="top"
-    ) + theme(
-      axis.text.x = element_text(angle=45, vjust=-.1,  hjust=-.1)
-    ) +
-    labs(x="", y="") +
-    scale_fill_gradient2(
-      low=col.scale[[1]], mid=col.scale[[2]], high=col.scale[[3]],
-      n.breaks=8)
+    .(gene, seurat_clusters)
+  ]
+  signif$is_signif <- T
+
+  return(signif)
+}
+
+#' Filter clusters based on minimum patient and minimum cell criteria
+cluster_filter <- function(x) {
+  # Get average cells per control patient per cluster to help set threshold for cells in min patients
+  dt <- x@meta.data[, c("cluster", "multi_q", "cond_cln")]
+  cpat_av <- dt %>%
+    dplyr::filter(cond_cln == "CONTROL") %>%
+    dplyr::count(multi_q, cluster) %>%
+    dplyr::summarise(mean(n)) %>%
+    unlist()
+  cthresh <- cpat_av * 0.25 # This is the threshold used for clusters
+  cnts <- dplyr::count(dt, cluster, multi_q, cond_cln)
+  clusts <- dplyr::mutate(cnts, has_count = n > cthresh) %>%
+    dplyr::group_by(cluster, cond_cln) %>%
+    dplyr::summarise(n_count_pass = sum(has_count)) %>%
+    dplyr::summarise(n_group_pass = all(n_count_pass > 3)) %>%
+    dplyr::filter(n_group_pass) %>%
+    dplyr::pull(cluster)
+  return(list(
+    cpass = clusts,
+    "threshold" = cthresh
+  ))
+}
+
+#' Set ordering function
+order_patients_by_level <- function(obj) {
+  obj@meta.data$multi_q <- as.character(obj@meta.data$multi_q)
+  multi_q_order <- dplyr::select(obj@meta.data, multi_q, cond_cln) %>%
+    dplyr::arrange(cond_cln) %>%
+    dplyr::pull(multi_q) %>%
+    unique()
+  obj@meta.data$multi_q <- forcats::fct_relevel(
+    obj@meta.data$multi_q, multi_q_order
+  )
+  return(obj)
 }

@@ -1,25 +1,32 @@
 # Explore parameters for clustering and dimension reduction
 
+# Library ----
 suppressPackageStartupMessages(source("code/plots.R"))
 suppressPackageStartupMessages(source("code/differential_expression.R"))
 suppressPackageStartupMessages(source("code/cluster_umap_tsne_search.R"))
 
-outdir <- fs::dir_create(here::here("gdm/results_v3"))
-figdir <- fs::dir_create(here::here("gdm/figures_v3"))
+# Variables ----
+outdir <- fs::dir_create(here::here("gdm/results"))
+figdir <- fs::dir_create(here::here("gdm/figures"))
 gdm_seurat <- readRDS(fs::path(outdir, "gdm_seurat.rds"))
 treg <- gdm_seurat$treg
 treg <- FindClusters(treg, resolution = 0.4) # Default high clust
 cd4 <- gdm_seurat$cd4
 cd4 <- FindClusters(cd4, resolution = 0.4) # Default high clust
 
-# Optimise clustering and dimension reduction parameters
+# Main ----
+
+
 log_info("Starting grid search")
 reclust_dir <- fs::dir_create(fs::path(figdir, "grid_search"))
+
+# Iterate clustering and dimension reduction parameters for Tregs
 search_umap(treg, "treg", reclust_dir, cores = 12)
 search_clusters(treg, "treg", reclust_dir, cores = 12)
 search_tsne(treg, "treg", reclust_dir, cores = 12)
 bind_figs(reclust_dir, "treg_umap")
-# Grid search CD4 params
+
+# Iterate clustering and dimension reduction parameters for CD4
 search_umap(cd4, "cd4", reclust_dir, cores = 12)
 search_clusters(cd4, "cd4", reclust_dir, cores = 12)
 search_tsne(cd4, "cd4", reclust_dir, cores = 12)
